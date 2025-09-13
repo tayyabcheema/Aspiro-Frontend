@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Removed Tailwind v4 experimental @custom-variant usage; using .dark class strategy already present */
+
+:root {
+  /* Modern dark UI color scheme - Navy Blue, Slate Gray, Bright Blue accents */
+  --background: oklch(0.08 0.02 264); /* Deep navy #0B1120 */
+  --foreground: oklch(0.985 0 0); /* White #FFFFFF */
+  --card: oklch(0.15 0.02 264 / 0.1); /* Glassmorphism card with transparency #1F2937 */
+  --card-foreground: oklch(0.95 0.02 264); /* Light text on cards */
+  --popover: oklch(0.15 0.02 264 / 0.2); /* Glassmorphism popover */
+  --popover-foreground: oklch(0.95 0.02 264);
+  --primary: oklch(0.6 0.2 240); /* Bright blue #3B82F6 */
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.85 0.02 264); /* Light gray #D1D5DB */
+  --secondary-foreground: oklch(0.15 0.02 264);
+  --muted: oklch(0.25 0.02 264); /* Slate gray #374151 */
+  --muted-foreground: oklch(0.7 0.02 264);
+  --accent: oklch(0.6 0.2 240); /* Bright blue for interactive elements */
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.55 0.25 25); /* Red for destructive actions */
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.25 0.02 264 / 0.2); /* Slate border for neumorphism */
+  --input: oklch(0.15 0.02 264 / 0.1); /* Glassmorphism input */
+  --ring: oklch(0.6 0.2 240 / 0.5); /* Bright blue ring */
+  --chart-1: oklch(0.6 0.2 240); /* Bright blue */
+  --chart-2: oklch(0.08 0.02 264); /* Deep navy */
+  --chart-3: oklch(0.85 0.02 264); /* Light gray */
+  --chart-4: oklch(0.55 0.25 25); /* Red */
+  --chart-5: oklch(0.5 0.2 140); /* Green */
+  --radius: 0.75rem; /* Increased radius for modern look */
+  --sidebar: oklch(0.06 0.02 264); /* Darker navy for sidebar #111827 */
+  --sidebar-foreground: oklch(0.9 0.02 264); /* Light gray text #E5E7EB */
+  --sidebar-primary: oklch(0.6 0.2 240); /* Bright blue */
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.15 0.02 264 / 0.1);
+  --sidebar-accent-foreground: oklch(0.9 0.02 264);
+  --sidebar-border: oklch(0.25 0.02 264 / 0.2);
+  --sidebar-ring: oklch(0.6 0.2 240 / 0.5);
+}
+
+.dark {
+  /* Enhanced dark mode tokens for glassmorphism effect */
+  --background: oklch(0.06 0.02 264); /* Deeper navy #0B1120 */
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.12 0.02 264 / 0.1); /* Enhanced glassmorphism #1F2937 */
+  --card-foreground: oklch(0.95 0.02 264);
+  --popover: oklch(0.12 0.02 264 / 0.2);
+  --popover-foreground: oklch(0.95 0.02 264);
+  --primary: oklch(0.65 0.22 240); /* Brighter blue */
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.2 0.02 264); /* Slate gray */
+  --secondary-foreground: oklch(0.9 0.02 264);
+  --muted: oklch(0.2 0.02 264); /* Slate gray */
+  --muted-foreground: oklch(0.7 0.02 264);
+  --accent: oklch(0.65 0.22 240); /* Bright blue */
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.5 0.22 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.25 0.02 264 / 0.2);
+  --input: oklch(0.12 0.02 264 / 0.1);
+  --ring: oklch(0.65 0.22 240 / 0.5);
+  --chart-1: oklch(0.65 0.22 240); /* Bright blue */
+  --chart-2: oklch(0.7 0.18 180); /* Teal */
+  --chart-3: oklch(0.75 0.15 140); /* Green */
+  --chart-4: oklch(0.6 0.25 25); /* Red */
+  --chart-5: oklch(0.65 0.2 60); /* Orange */
+  --sidebar: oklch(0.04 0.02 264); /* Darkest navy */
+  --sidebar-foreground: oklch(0.9 0.02 264); /* Light gray text */
+  --sidebar-primary: oklch(0.65 0.22 240); /* Bright blue */
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.12 0.02 264 / 0.1);
+  --sidebar-accent-foreground: oklch(0.9 0.02 264);
+  --sidebar-border: oklch(0.25 0.02 264 / 0.2);
+  --sidebar-ring: oklch(0.65 0.22 240 / 0.5);
+}
+
+@layer base {
+  * { @apply border-border; outline-color: var(--ring); }
+  body { @apply bg-background text-foreground antialiased; }
+
+  /* Glassmorphism utilities */
+  .glass { @apply backdrop-blur-md bg-white/5 border border-white/10; }
+  .glass-card { @apply backdrop-blur-lg bg-white/5 border border-white/10 shadow-xl; }
+  .glass-strong { @apply backdrop-blur-xl bg-white/10 border border-white/20; }
+
+  /* Neumorphism (simplified for v3) */
+  .neuro { @apply shadow-inner; }
+  .neuro-inset { @apply shadow-inner; }
+
+  /* Smooth transitions */
+  .transition-smooth { @apply transition-all duration-300 ease-in-out; }
+
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background-color: oklch(0.25 0.02 264); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background-color: oklch(0.35 0.02 264); }
+}

@@ -195,13 +195,18 @@ export default function RoadmapDisplay({ onRoadmapUpdate }: RoadmapDisplayProps)
           <BookOpen className="h-5 w-5" />
           Recommended Courses
         </h3>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {(roadmap.courses || []).map((courseItem, index) => (
             <GlassCard key={courseItem.course._id} className="p-4 border border-cyan-400/30">
               <GlassCardContent className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h4 className="font-semibold text-white mb-1">{courseItem.course.title}</h4>
+                    <div className="flex gap-2 items-center capitalize text-sm text-white/70 mb-2">
+                      <div className="h-2 w-2 mt-[1px] rounded-full bg-yellow-500"></div>
+                      {/* {courseItem.course.status} */}
+                      Pending
+                    </div>
                     <p className="text-sm text-white/70 mb-2">{courseItem.course.category}</p>
                     <p className="text-xs text-white/60 mb-3">{courseItem.reason}</p>
                   </div>

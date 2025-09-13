@@ -88,7 +88,7 @@ export default function DashboardPage() {
              {/* Main Content */}
              <div className="flex-1 p-4 lg:p-6">
                {/* Main Card Container */}
-               <div className="max-w-6xl mx-auto">
+               <div className="w-full mx-auto">
                  <div className="p-4 sm:p-6 lg:p-8 rounded-2xl backdrop-blur-xl bg-[#0e2439]/90 border border-cyan-400/30 shadow-2xl shadow-cyan-400/20">
                    <RoadmapDisplay onRoadmapUpdate={handleRoadmapUpdate} />
                  </div>

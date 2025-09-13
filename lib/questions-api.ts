@@ -130,4 +130,80 @@ export async function addMultipleQuestions(questions: AddQuestionRequest[], toke
   }
 }
 
-export type { Question, AddQuestionRequest, AddQuestionsResponse };
+export interface UpdateQuestionRequest {
+  text: string;
+  type: "text" | "yes/no" | "multiple-choice" | "upload" | "link";
+  options?: string[];
+  step: {
+    stepNumber: number;
+    stepName: string;
+  };
+  category: "student" | "professional";
+  optional?: boolean;
+  status?: "active" | "inactive";
+  documents?: {
+    cv: boolean;
+    optionalDocs: Array<{
+      type: string;
+      required: boolean;
+    }>;
+  };
+}
+
+export interface UpdateQuestionResponse {
+  message: string;
+  data: Question;
+}
+
+export interface DeleteQuestionResponse {
+  message: string;
+}
+
+export async function updateQuestion(id: string, question: UpdateQuestionRequest, token: string): Promise<UpdateQuestionResponse> {
+  try {
+    const response = await fetch(getApiUrl(`/questions/${id}`), {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(question),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to update question: ${response.status} ${response.statusText}`);
+    }
+
+    const data: UpdateQuestionResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating question:', error);
+    throw error;
+  }
+}
+
+export async function deleteQuestion(id: string, token: string): Promise<DeleteQuestionResponse> {
+  try {
+    const response = await fetch(getApiUrl(`/questions/${id}`), {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to delete question: ${response.status} ${response.statusText}`);
+    }
+
+    const data: DeleteQuestionResponse = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error deleting question:', error);
+    throw error;
+  }
+}
+
+export type { Question, AddQuestionRequest, AddQuestionsResponse, UpdateQuestionRequest, UpdateQuestionResponse, DeleteQuestionResponse };

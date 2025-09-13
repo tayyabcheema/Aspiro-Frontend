@@ -44,6 +44,14 @@ export async function apiRequest<T = any>(
     const data = await response.json()
 
     if (!response.ok) {
+      // Handle authentication errors by redirecting to login
+      if (response.status === 401) {
+        // Clear invalid token and redirect to login
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        throw new ApiError('Session expired. Please login again.', response.status)
+      }
       throw new ApiError(data.message || 'Request failed', response.status)
     }
 

@@ -179,6 +179,20 @@ export default function OnboardingPage() {
     }
   }
 
+  const handleSkip = () => {
+    // Skip current step and move to next
+    if (currentStep < onboardingSteps.length - 2) {
+      setIsAnimating(true)
+      setTimeout(() => {
+        setCurrentStep(currentStep + 1)
+        setIsAnimating(false)
+      }, 150)
+    } else {
+      // Last regular question - save data and redirect to preview
+      handleGoToPreview()
+    }
+  }
+
   const handleGoToPreview = async () => {
     try {
       
@@ -461,9 +475,24 @@ export default function OnboardingPage() {
   const currentStepData = onboardingSteps[currentStep]
   const currentValue = formData[currentStepData?.id]
   
+  // Check if current step is CV upload (mandatory)
+  const isCVUpload = currentStepData?.type === "file" && (
+    currentStepData.title.toLowerCase().includes('most recent cv') ||
+    currentStepData.title.toLowerCase().includes('please upload your most recent') ||
+    (currentStepData.title.toLowerCase().includes('cv') && currentStepData.title.toLowerCase().includes('pdf') && !currentStepData.title.toLowerCase().includes('optional')) ||
+    (currentStepData.title.toLowerCase().includes('resume') && currentStepData.title.toLowerCase().includes('pdf') && !currentStepData.title.toLowerCase().includes('optional'))
+  );
+
   // Validation for current step
   const isValid = (() => {
     if (!currentStepData) return false
+    
+    // CV upload is always mandatory
+    if (isCVUpload) {
+      const files = uploadedFiles[currentStepData.id]
+      const hasFiles = files && files.length > 0
+      return hasFiles
+    }
     
     // If question is optional, always allow proceeding
     if (!currentStepData.required) {
@@ -471,13 +500,11 @@ export default function OnboardingPage() {
       return true;
     }
     
-    // Special validation for file uploads
+    // Special validation for other file uploads
     if (currentStepData.type === "file") {
-      // For file uploads, check if files are uploaded
+      // For non-CV file uploads, check if files are uploaded
       const files = uploadedFiles[currentStepData.id]
       const hasFiles = files && files.length > 0
-      
-      
       return hasFiles
     }
     
@@ -488,6 +515,9 @@ export default function OnboardingPage() {
       currentValue.toString().trim().length > 0
     )
   })() || false
+
+  // Check if user can skip this step (not CV upload and not required)
+  const canSkip = !isCVUpload && !currentStepData?.required
   
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -517,9 +547,17 @@ export default function OnboardingPage() {
         <div className="sticky top-0 z-10 p-4 sm:p-6 glass-card border-b border-cyan-400/20 backdrop-blur-xl bg-[#0e2439]/80">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs sm:text-sm text-cyan-300">
-                Step {currentStep + 1} of {totalSteps}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm text-cyan-300">
+                  Step {currentStep + 1} of {totalSteps}
+                </span>
+                {isCVUpload && (
+                  <span className="text-xs text-red-400/80 font-medium">Required</span>
+                )}
+                {!currentStepData?.required && !isCVUpload && (
+                  <span className="text-xs text-cyan-400/70">Optional</span>
+                )}
+              </div>
               <span className="text-xs sm:text-sm text-cyan-300">{Math.round(progress)}% complete</span>
             </div>
             <Progress value={progress} className="h-2 sm:h-2 bg-[#0e2439]/50">
@@ -597,7 +635,12 @@ export default function OnboardingPage() {
                             {currentStepData.subtitle}
                           </p>
                         )}
-                        {!currentStepData.required && (
+                        {isCVUpload && (
+                          <p className="text-xs sm:text-sm text-red-400/80 mt-2 font-medium">
+                            ⚠️ CV upload is mandatory to continue
+                          </p>
+                        )}
+                        {!currentStepData.required && !isCVUpload && (
                           <p className="text-xs sm:text-sm text-cyan-400/70 mt-2 italic">
                             This question is optional - you can skip it and proceed
                           </p>
@@ -882,31 +925,46 @@ export default function OnboardingPage() {
                   <span className="sm:hidden">Back</span>
                 </button>
 
-                <button 
-                  onClick={handleNext} 
-                  disabled={!isValid || isAnimating || isSaving} 
-                  className="flex items-center gap-2 h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold tracking-wide shadow-lg shadow-cyan-500/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none rounded-md relative z-50 text-sm sm:text-base"
-                  style={{ position: 'relative', zIndex: 50 }}
-                >
-                  {isSaving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                  <span className="hidden sm:inline">
-                        {currentStep === 0 ? "Continue" : 
-                         (currentStep - 1 === onboardingSteps.length - 2 ? "Review & Submit" : "Next")}
-                  </span>
-                  <span className="sm:hidden">
-                        {currentStep === 0 ? "Continue" : 
-                         (currentStep - 1 === onboardingSteps.length - 2 ? "Review" : "Next")}
-                  </span>
-                  <ArrowRight className="h-4 w-4" />
-                    </>
+                <div className="flex items-center gap-2">
+                  {/* Skip button - only show for optional questions */}
+                  {canSkip && (
+                    <button
+                      onClick={handleSkip}
+                      disabled={isAnimating || isSaving}
+                      className="flex items-center gap-2 h-10 sm:h-12 px-3 sm:px-4 bg-transparent border border-cyan-400/30 text-cyan-300 hover:text-cyan-100 hover:bg-cyan-400/10 transition-all duration-300 rounded-md relative z-50 text-sm sm:text-base"
+                      style={{ position: 'relative', zIndex: 50 }}
+                    >
+                      <span className="hidden sm:inline">Skip</span>
+                      <span className="sm:hidden">Skip</span>
+                    </button>
                   )}
-                </button>
+
+                  <button 
+                    onClick={handleNext} 
+                    disabled={!isValid || isAnimating || isSaving} 
+                    className="flex items-center gap-2 h-10 sm:h-12 px-4 sm:px-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold tracking-wide shadow-lg shadow-cyan-500/25 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none rounded-md relative z-50 text-sm sm:text-base"
+                    style={{ position: 'relative', zIndex: 50 }}
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                    <span className="hidden sm:inline">
+                          {currentStep === 0 ? "Continue" : 
+                           (currentStep - 1 === onboardingSteps.length - 2 ? "Review & Submit" : "Next")}
+                    </span>
+                    <span className="sm:hidden">
+                          {currentStep === 0 ? "Continue" : 
+                           (currentStep - 1 === onboardingSteps.length - 2 ? "Review" : "Next")}
+                    </span>
+                    <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>

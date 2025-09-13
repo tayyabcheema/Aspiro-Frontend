@@ -14,6 +14,8 @@ import {
   Filter,
   Eye,
   Plus,
+  Edit,
+  Trash2,
 } from "lucide-react"
 import AdminOnly from "../AdminOnly"
 import { AdminSidebar } from "@/components/admin-sidebar"
@@ -24,8 +26,11 @@ import {
   Question, 
   AddQuestionRequest, 
   AddQuestionsResponse, 
+  UpdateQuestionRequest,
   fetchQuestions, 
-  addQuestion
+  addQuestion,
+  updateQuestion,
+  deleteQuestion
 } from "@/lib/questions-api"
 
 type QuestionCategory = "student" | "professional"
@@ -46,7 +51,9 @@ export default function QuestionsManagement() {
 
   // Dialog state
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
 
   // Forms
@@ -68,6 +75,8 @@ export default function QuestionsManagement() {
   })
   
   const [isSaving, setIsSaving] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Load questions on component mount
   useEffect(() => {
@@ -211,6 +220,103 @@ export default function QuestionsManagement() {
     })
   }
 
+  // Edit and Delete handlers
+  const handleEditQuestion = (question: Question) => {
+    setSelectedQuestion(question)
+    setSingleQuestionForm({
+      text: question.text,
+      type: question.type,
+      options: question.options || [],
+      step: question.step,
+      category: question.category,
+      optional: question.optional || false,
+      status: question.status || "active",
+      documents: question.documents || {
+        cv: true,
+        optionalDocs: []
+      }
+    })
+    setIsEditOpen(true)
+  }
+
+  const handleUpdateQuestion = async () => {
+    if (!selectedQuestion || !singleQuestionForm.text.trim()) {
+      toast({ title: "Question text is required", description: "Please enter a question." })
+      return
+    }
+
+    if (!singleQuestionForm.step.stepName.trim()) {
+      toast({ title: "Step name is required", description: "Please enter a step name." })
+      return
+    }
+
+    if (singleQuestionForm.type === "multiple-choice" && (!singleQuestionForm.options || singleQuestionForm.options.length === 0)) {
+      toast({ title: "Options are required", description: "Please provide options for multiple-choice questions." })
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      const token = getToken()
+      if (!token) {
+        toast({ title: "Authentication required", description: "Please log in again." })
+        return
+      }
+
+      const result = await updateQuestion(selectedQuestion._id, singleQuestionForm, token)
+      
+      toast({ 
+        title: "Question updated successfully", 
+        description: result.message,
+        duration: 3000
+      })
+      setIsEditOpen(false)
+      setSelectedQuestion(null)
+      resetSingleQuestionForm()
+      loadQuestions() // Reload questions
+    } catch (error) {
+      console.error('Error updating question:', error)
+      toast({ 
+        title: "Failed to update question", 
+        description: error instanceof Error ? error.message : "Please try again." 
+      })
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDeleteQuestion = async () => {
+    if (!selectedQuestion) return
+
+    setIsDeleting(true)
+    try {
+      const token = getToken()
+      if (!token) {
+        toast({ title: "Authentication required", description: "Please log in again." })
+        return
+      }
+
+      await deleteQuestion(selectedQuestion._id, token)
+      
+      toast({ 
+        title: "Question deleted successfully", 
+        description: "The question has been removed.",
+        duration: 3000
+      })
+      setIsDeleteOpen(false)
+      setSelectedQuestion(null)
+      loadQuestions() // Reload questions
+    } catch (error) {
+      console.error('Error deleting question:', error)
+      toast({ 
+        title: "Failed to delete question", 
+        description: error instanceof Error ? error.message : "Please try again." 
+      })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
 
   return (
     <AdminOnly>
@@ -347,9 +453,16 @@ export default function QuestionsManagement() {
                             </Badge>
                           </td>
                           <td className="py-4 px-2 sm:px-4">
-                            <Badge className={`${getStatusColor(question.status)} text-xs font-medium capitalize`}>
-                              {question.status}
-                            </Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${getStatusColor(question.status)} text-xs font-medium capitalize`}>
+                                {question.status}
+                              </Badge>
+                              {question.optional && (
+                                <Badge className="bg-orange-500/20 text-orange-300 border border-orange-400/40 text-xs font-medium">
+                                  Optional
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="py-4 px-2 sm:px-4 text-sm text-cyan-300 hidden md:table-cell">
                             {question.options && question.options.length > 0 
@@ -364,6 +477,12 @@ export default function QuestionsManagement() {
                             <div className="flex items-center gap-1 sm:gap-2">
                               <NeuroButton variant="ghost" size="sm" title="View" onClick={() => { setSelectedQuestion(question); setIsViewOpen(true) }} className="text-cyan-100 hover:bg-cyan-400/10 p-1 sm:p-2">
                                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </NeuroButton>
+                              <NeuroButton variant="ghost" size="sm" title="Edit" onClick={() => handleEditQuestion(question)} className="text-blue-100 hover:bg-blue-400/10 p-1 sm:p-2">
+                                <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </NeuroButton>
+                              <NeuroButton variant="ghost" size="sm" title="Delete" onClick={() => { setSelectedQuestion(question); setIsDeleteOpen(true) }} className="text-red-100 hover:bg-red-400/10 p-1 sm:p-2">
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                               </NeuroButton>
                             </div>
                           </td>
@@ -636,6 +755,208 @@ export default function QuestionsManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Modal */}
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-cyan-400/30 max-w-2xl mx-4 sm:mx-auto">
+            <DialogHeader>
+              <DialogTitle className="text-white text-lg">Edit Question</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-white/80 block mb-1">Question Text *</label>
+                <Textarea 
+                  value={singleQuestionForm.text} 
+                  onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, text: e.target.value })} 
+                  className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm resize-none min-h-20" 
+                  placeholder="Enter your question here..." 
+                  autoFocus
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Category *</label>
+                  <select 
+                    value={singleQuestionForm.category} 
+                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, category: e.target.value as QuestionCategory })} 
+                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                  >
+                    <option value="student">Student</option>
+                    <option value="professional">Professional</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Type *</label>
+                  <select 
+                    value={singleQuestionForm.type} 
+                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, type: e.target.value as QuestionType })} 
+                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                  >
+                    <option value="text">Text</option>
+                    <option value="yes/no">Yes/No</option>
+                    <option value="multiple-choice">Multiple Choice</option>
+                    <option value="upload">Upload</option>
+                    <option value="link">Link</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Step Number *</label>
+                  <Input
+                    type="number"
+                    value={singleQuestionForm.step.stepNumber}
+                    onChange={(e) => setSingleQuestionForm({ 
+                      ...singleQuestionForm, 
+                      step: { ...singleQuestionForm.step, stepNumber: parseInt(e.target.value) || 1 }
+                    })}
+                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm"
+                    min="1"
+                    max="10"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Step Name *</label>
+                  <select 
+                    value={singleQuestionForm.step.stepName} 
+                    onChange={(e) => {
+                      const stepName = e.target.value
+                      const stepNumberMap: Record<string, number> = {
+                        "Academic Background": 1,
+                        "Career Aspirations": 2,
+                        "Skills & Strengths": 3,
+                        "Learning & Development Preferences": 4,
+                        "Timeline & Goals": 5,
+                        "Work Preferences": 6,
+                        "Career Motivation": 7,
+                        "Career Challenges & Barriers": 8,
+                        "Networking & Professional Exposure": 9,
+                        "Professional Profiles & Documents": 10
+                      }
+                      setSingleQuestionForm({ 
+                        ...singleQuestionForm, 
+                        step: { 
+                          stepNumber: stepNumberMap[stepName] || singleQuestionForm.step.stepNumber,
+                          stepName: stepName 
+                        }
+                      })
+                    }} 
+                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                  >
+                    <option value="Academic Background">Academic Background</option>
+                    <option value="Career Aspirations">Career Aspirations</option>
+                    <option value="Skills & Strengths">Skills & Strengths</option>
+                    <option value="Learning & Development Preferences">Learning & Development Preferences</option>
+                    <option value="Timeline & Goals">Timeline & Goals</option>
+                    <option value="Work Preferences">Work Preferences</option>
+                    <option value="Career Motivation">Career Motivation</option>
+                    <option value="Career Challenges & Barriers">Career Challenges & Barriers</option>
+                    <option value="Networking & Professional Exposure">Networking & Professional Exposure</option>
+                    <option value="Professional Profiles & Documents">Professional Profiles & Documents</option>
+                  </select>
+                </div>
+              </div>
+              
+              {singleQuestionForm.type === "multiple-choice" && (
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Options (one per line) *</label>
+                  <Textarea 
+                    value={singleQuestionForm.options?.join('\n') || ''} 
+                    onChange={(e) => setSingleQuestionForm({ 
+                      ...singleQuestionForm, 
+                      options: e.target.value.split('\n').filter(opt => opt.trim())
+                    })} 
+                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm resize-none min-h-16" 
+                    placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4" 
+                  />
+                  <p className="text-xs text-cyan-300/70 mt-1">Enter each option on a new line</p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="optional-edit"
+                    checked={singleQuestionForm.optional}
+                    onCheckedChange={(checked) => setSingleQuestionForm({ ...singleQuestionForm, optional: !!checked })}
+                    className="border-cyan-400/30 data-[state=checked]:bg-cyan-400"
+                  />
+                  <Label htmlFor="optional-edit" className="text-sm text-white/80">Optional Question</Label>
+                </div>
+                <div>
+                  <label className="text-sm text-white/80 block mb-1">Status</label>
+                  <select 
+                    value={singleQuestionForm.status} 
+                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, status: e.target.value as "active" | "inactive" })} 
+                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+              
+              {singleQuestionForm.type === "upload" && (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="cv-required-edit"
+                      checked={singleQuestionForm.documents?.cv || false}
+                      onCheckedChange={(checked) => setSingleQuestionForm({ 
+                        ...singleQuestionForm, 
+                        documents: { 
+                          ...singleQuestionForm.documents, 
+                          cv: !!checked 
+                        } 
+                      })}
+                      className="border-cyan-400/30 data-[state=checked]:bg-cyan-400"
+                    />
+                    <Label htmlFor="cv-required-edit" className="text-sm text-white/80">CV Required</Label>
+                  </div>
+                  <p className="text-xs text-cyan-300/70">Check if this upload question requires a CV</p>
+                </div>
+              )}
+            </div>
+            
+            <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
+              <NeuroButton variant="outline" onClick={() => setIsEditOpen(false)} className="border-cyan-400/30 text-cyan-100 w-full sm:w-auto text-sm">Cancel</NeuroButton>
+              <NeuroButton onClick={handleUpdateQuestion} disabled={isUpdating || !singleQuestionForm.text.trim() || !singleQuestionForm.step.stepName.trim()} className="bg-cyan-400/20 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/30 w-full sm:w-auto text-sm">
+                {isUpdating ? "Updating..." : "Update Question"}
+              </NeuroButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+          <AlertDialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-red-400/30">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-white text-lg">Delete Question</AlertDialogTitle>
+              <AlertDialogDescription className="text-white/70">
+                Are you sure you want to delete this question? This action cannot be undone.
+                {selectedQuestion && (
+                  <div className="mt-2 p-3 bg-red-500/10 border border-red-400/20 rounded-md">
+                    <p className="text-sm font-medium text-red-300">Question:</p>
+                    <p className="text-sm text-red-200 mt-1">{selectedQuestion.text}</p>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+              <AlertDialogCancel className="border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/10 w-full sm:w-auto">Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteQuestion}
+                disabled={isDeleting}
+                className="bg-red-500/20 border border-red-400/30 text-red-100 hover:bg-red-500/30 w-full sm:w-auto"
+              >
+                {isDeleting ? "Deleting..." : "Delete Question"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </div>
       </div>
     </AdminOnly>

@@ -4,7 +4,7 @@
 export const API_CONFIG = {
   // Use NEXT_PUBLIC_API_BASE_URL if available, otherwise fallback to NEXT_PUBLIC_API_URL
   // This provides flexibility for different naming conventions
-  BASE_URL: (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, ''),
+  BASE_URL: (process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/$/, ''),
   
   // Backend origin for server-side proxy (used in API routes)
   BACKEND_ORIGIN: process.env.BACKEND_ORIGIN || process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',

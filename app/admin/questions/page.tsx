@@ -41,7 +41,6 @@ export default function QuestionsManagement() {
   const { toast } = useToast()
 
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [selectedType, setSelectedType] = useState<string>("all")
 
   // Questions data from API
@@ -105,16 +104,6 @@ export default function QuestionsManagement() {
     }
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "student":
-        return "bg-blue-600 text-white"
-      case "professional":
-        return "bg-purple-600 text-white"
-      default:
-        return "bg-gray-600 text-white"
-    }
-  }
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -148,11 +137,10 @@ export default function QuestionsManagement() {
     const term = searchTerm.trim().toLowerCase()
     return questions.filter((q) => {
       const matchesSearch = !term || q.text.toLowerCase().includes(term)
-      const matchesCategory = selectedCategory === "all" || q.category === (selectedCategory as QuestionCategory)
       const matchesType = selectedType === "all" || q.type === (selectedType as QuestionType)
-      return matchesSearch && matchesCategory && matchesType
+      return matchesSearch && matchesType
     })
-  }, [questions, searchTerm, selectedCategory, selectedType])
+  }, [questions, searchTerm, selectedType])
 
   // Form submission handlers
   const handleAddSingleQuestion = async () => {
@@ -161,14 +149,19 @@ export default function QuestionsManagement() {
       return
     }
 
-    if (!singleQuestionForm.step.stepName.trim()) {
-      toast({ title: "Step name is required", description: "Please enter a step name." })
-      return
-    }
-
-    if (singleQuestionForm.type === "multiple-choice" && (!singleQuestionForm.options || singleQuestionForm.options.length === 0)) {
-      toast({ title: "Options are required", description: "Please provide options for multiple-choice questions." })
-      return
+    if (singleQuestionForm.type === "multiple-choice") {
+      if (!singleQuestionForm.options || singleQuestionForm.options.length < 2) {
+        toast({ title: "Options are required", description: "Please provide at least 2 options for multiple-choice questions." })
+        return
+      }
+      if (singleQuestionForm.options.some(option => !option.trim())) {
+        toast({ title: "Empty options not allowed", description: "Please fill in all option fields or remove empty ones." })
+        return
+      }
+      if (singleQuestionForm.options.length > 10) {
+        toast({ title: "Too many options", description: "You can add maximum 10 options for multiple-choice questions." })
+        return
+      }
     }
 
     setIsSaving(true)
@@ -245,14 +238,19 @@ export default function QuestionsManagement() {
       return
     }
 
-    if (!singleQuestionForm.step.stepName.trim()) {
-      toast({ title: "Step name is required", description: "Please enter a step name." })
-      return
-    }
-
-    if (singleQuestionForm.type === "multiple-choice" && (!singleQuestionForm.options || singleQuestionForm.options.length === 0)) {
-      toast({ title: "Options are required", description: "Please provide options for multiple-choice questions." })
-      return
+    if (singleQuestionForm.type === "multiple-choice") {
+      if (!singleQuestionForm.options || singleQuestionForm.options.length < 2) {
+        toast({ title: "Options are required", description: "Please provide at least 2 options for multiple-choice questions." })
+        return
+      }
+      if (singleQuestionForm.options.some(option => !option.trim())) {
+        toast({ title: "Empty options not allowed", description: "Please fill in all option fields or remove empty ones." })
+        return
+      }
+      if (singleQuestionForm.options.length > 10) {
+        toast({ title: "Too many options", description: "You can add maximum 10 options for multiple-choice questions." })
+        return
+      }
     }
 
     setIsUpdating(true)
@@ -356,15 +354,6 @@ export default function QuestionsManagement() {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-3 py-2 bg-[#0e2439]/50 backdrop-blur-sm border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white min-w-[120px]"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="student">Student</option>
-                    <option value="professional">Professional</option>
-                  </select>
-                  <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
                     className="px-3 py-2 bg-[#0e2439]/50 backdrop-blur-sm border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white min-w-[140px]"
@@ -398,8 +387,6 @@ export default function QuestionsManagement() {
                   <thead>
                     <tr className="border-b border-cyan-400/20">
                       <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm">Question</th>
-                      <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm">Step</th>
-                      <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm">Category</th>
                       <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm">Type</th>
                       <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm">Status</th>
                       <th className="text-left py-3 px-2 sm:px-4 font-medium text-white text-sm hidden md:table-cell">Options</th>
@@ -409,13 +396,13 @@ export default function QuestionsManagement() {
                   <tbody>
                     {isLoading ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-cyan-300">
+                        <td colSpan={5} className="py-8 text-center text-cyan-300">
                           <LoadingSpinner text="Loading questions..." />
                         </td>
                       </tr>
                     ) : filteredQuestions.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-cyan-300">No questions found</td>
+                        <td colSpan={5} className="py-8 text-center text-cyan-300">No questions found</td>
                       </tr>
                     ) : (
                       filteredQuestions.map((question) => (
@@ -435,17 +422,6 @@ export default function QuestionsManagement() {
                                 </p>
                               </div>
                             </div>
-                          </td>
-                          <td className="py-4 px-2 sm:px-4">
-                            <div className="text-sm text-cyan-300">
-                              <div className="font-medium">#{question.step.stepNumber}</div>
-                              <div className="text-xs text-cyan-300/70">{question.step.stepName}</div>
-                            </div>
-                          </td>
-                          <td className="py-4 px-2 sm:px-4">
-                            <Badge className={`${getCategoryColor(question.category)} text-xs font-medium capitalize`}>
-                              {question.category}
-                            </Badge>
                           </td>
                           <td className="py-4 px-2 sm:px-4">
                             <Badge className={`${getTypeColor(question.type)} text-xs font-medium`}>
@@ -520,104 +496,98 @@ export default function QuestionsManagement() {
                 <p className="text-xs text-cyan-300/70 mt-1">Press Ctrl+Enter to quickly add the question</p>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Category *</label>
-                  <select 
-                    value={singleQuestionForm.category} 
-                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, category: e.target.value as QuestionCategory })} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="student">Student</option>
-                    <option value="professional">Professional</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Type *</label>
-                  <select 
-                    value={singleQuestionForm.type} 
-                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, type: e.target.value as QuestionType })} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="text">Text</option>
-                    <option value="yes/no">Yes/No</option>
-                    <option value="multiple-choice">Multiple Choice</option>
-                    <option value="upload">Upload</option>
-                    <option value="link">Link</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Step Number *</label>
-                  <Input
-                    type="number"
-                    value={singleQuestionForm.step.stepNumber}
-                    onChange={(e) => setSingleQuestionForm({ 
+              <div>
+                <label className="text-sm text-white/80 block mb-1">Type *</label>
+                <select 
+                  value={singleQuestionForm.type} 
+                  onChange={(e) => {
+                    const newType = e.target.value as QuestionType
+                    setSingleQuestionForm({ 
                       ...singleQuestionForm, 
-                      step: { ...singleQuestionForm.step, stepNumber: parseInt(e.target.value) || 1 }
-                    })}
-                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm"
-                    min="1"
-                    max="10"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Step Name *</label>
-                  <select 
-                    value={singleQuestionForm.step.stepName} 
-                    onChange={(e) => {
-                      const stepName = e.target.value
-                      const stepNumberMap: Record<string, number> = {
-                        "Academic Background": 1,
-                        "Career Aspirations": 2,
-                        "Skills & Strengths": 3,
-                        "Learning & Development Preferences": 4,
-                        "Timeline & Goals": 5,
-                        "Work Preferences": 6,
-                        "Career Motivation": 7,
-                        "Career Challenges & Barriers": 8,
-                        "Networking & Professional Exposure": 9,
-                        "Professional Profiles & Documents": 10
-                      }
-                      setSingleQuestionForm({ 
-                        ...singleQuestionForm, 
-                        step: { 
-                          stepNumber: stepNumberMap[stepName] || singleQuestionForm.step.stepNumber,
-                          stepName: stepName 
-                        }
-                      })
-                    }} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="Academic Background">Academic Background</option>
-                    <option value="Career Aspirations">Career Aspirations</option>
-                    <option value="Skills & Strengths">Skills & Strengths</option>
-                    <option value="Learning & Development Preferences">Learning & Development Preferences</option>
-                    <option value="Timeline & Goals">Timeline & Goals</option>
-                    <option value="Work Preferences">Work Preferences</option>
-                    <option value="Career Motivation">Career Motivation</option>
-                    <option value="Career Challenges & Barriers">Career Challenges & Barriers</option>
-                    <option value="Networking & Professional Exposure">Networking & Professional Exposure</option>
-                    <option value="Professional Profiles & Documents">Professional Profiles & Documents</option>
-                  </select>
-                </div>
+                      type: newType,
+                      options: newType === "multiple-choice" ? ['', ''] : []
+                    })
+                  }} 
+                  className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                >
+                  <option value="text">Text</option>
+                  <option value="yes/no">Yes/No</option>
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="upload">Upload</option>
+                  <option value="link">Link</option>
+                </select>
               </div>
               
               {singleQuestionForm.type === "multiple-choice" && (
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Options (one per line) *</label>
-                  <Textarea 
-                    value={singleQuestionForm.options?.join('\n') || ''} 
-                    onChange={(e) => setSingleQuestionForm({ 
-                      ...singleQuestionForm, 
-                      options: e.target.value.split('\n').filter(opt => opt.trim())
-                    })} 
-                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm resize-none min-h-16" 
-                    placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4" 
-                  />
-                  <p className="text-xs text-cyan-300/70 mt-1">Enter each option on a new line</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-white/80 block">Options *</label>
+                    <NeuroButton
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSingleQuestionForm({
+                        ...singleQuestionForm,
+                        options: [...(singleQuestionForm.options || []), '']
+                      })}
+                      className="border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/10 text-xs"
+                      disabled={(singleQuestionForm.options || []).length >= 10}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Option ({(singleQuestionForm.options || []).length}/10)
+                    </NeuroButton>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(singleQuestionForm.options || []).map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...(singleQuestionForm.options || [])]
+                              newOptions[index] = e.target.value
+                              setSingleQuestionForm({
+                                ...singleQuestionForm,
+                                options: newOptions
+                              })
+                            }}
+                            placeholder={`Option ${index + 1}`}
+                            className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm focus:border-cyan-400/60"
+                          />
+                        </div>
+                        <NeuroButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newOptions = (singleQuestionForm.options || []).filter((_, i) => i !== index)
+                            setSingleQuestionForm({
+                              ...singleQuestionForm,
+                              options: newOptions
+                            })
+                          }}
+                          className="text-red-300 hover:bg-red-400/10 p-1"
+                          disabled={(singleQuestionForm.options || []).length <= 2}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </NeuroButton>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {(!singleQuestionForm.options || singleQuestionForm.options.length === 0) && (
+                    <div className="text-center py-4 text-cyan-300/70 text-sm">
+                      No options added yet. Click "Add Option" to get started.
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-cyan-300/70">
+                    Add at least 2 options for multiple choice questions. You can add up to 10 options.
+                    {(singleQuestionForm.options || []).length < 2 && (
+                      <span className="text-orange-300 ml-1">• Minimum 2 options required</span>
+                    )}
+                  </p>
                 </div>
               )}
               
@@ -668,7 +638,7 @@ export default function QuestionsManagement() {
             
             <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
               <NeuroButton variant="outline" onClick={() => setIsAddOpen(false)} className="border-cyan-400/30 text-cyan-100 w-full sm:w-auto text-sm">Cancel</NeuroButton>
-              <NeuroButton onClick={handleAddSingleQuestion} disabled={isSaving || !singleQuestionForm.text.trim() || !singleQuestionForm.step.stepName.trim()} className="bg-cyan-400/20 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/30 w-full sm:w-auto text-sm">
+              <NeuroButton onClick={handleAddSingleQuestion} disabled={isSaving || !singleQuestionForm.text.trim()} className="bg-cyan-400/20 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/30 w-full sm:w-auto text-sm">
                 {isSaving ? "Adding..." : "Add Question"}
               </NeuroButton>
             </DialogFooter>
@@ -686,14 +656,6 @@ export default function QuestionsManagement() {
                 <div className="flex justify-between items-start">
                   <span className="text-white/70 min-w-0 mr-4">Question</span>
                   <span className="text-right break-words">{selectedQuestion.text}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/70">Step</span>
-                  <span>#{selectedQuestion.step.stepNumber} - {selectedQuestion.step.stepName}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-white/70">Category</span>
-                  <span className="capitalize">{selectedQuestion.category}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/70">Type</span>
@@ -775,104 +737,98 @@ export default function QuestionsManagement() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Category *</label>
-                  <select 
-                    value={singleQuestionForm.category} 
-                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, category: e.target.value as QuestionCategory })} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="student">Student</option>
-                    <option value="professional">Professional</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Type *</label>
-                  <select 
-                    value={singleQuestionForm.type} 
-                    onChange={(e) => setSingleQuestionForm({ ...singleQuestionForm, type: e.target.value as QuestionType })} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="text">Text</option>
-                    <option value="yes/no">Yes/No</option>
-                    <option value="multiple-choice">Multiple Choice</option>
-                    <option value="upload">Upload</option>
-                    <option value="link">Link</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Step Number *</label>
-                  <Input
-                    type="number"
-                    value={singleQuestionForm.step.stepNumber}
-                    onChange={(e) => setSingleQuestionForm({ 
+              <div>
+                <label className="text-sm text-white/80 block mb-1">Type *</label>
+                <select 
+                  value={singleQuestionForm.type} 
+                  onChange={(e) => {
+                    const newType = e.target.value as QuestionType
+                    setSingleQuestionForm({ 
                       ...singleQuestionForm, 
-                      step: { ...singleQuestionForm.step, stepNumber: parseInt(e.target.value) || 1 }
-                    })}
-                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm"
-                    min="1"
-                    max="10"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Step Name *</label>
-                  <select 
-                    value={singleQuestionForm.step.stepName} 
-                    onChange={(e) => {
-                      const stepName = e.target.value
-                      const stepNumberMap: Record<string, number> = {
-                        "Academic Background": 1,
-                        "Career Aspirations": 2,
-                        "Skills & Strengths": 3,
-                        "Learning & Development Preferences": 4,
-                        "Timeline & Goals": 5,
-                        "Work Preferences": 6,
-                        "Career Motivation": 7,
-                        "Career Challenges & Barriers": 8,
-                        "Networking & Professional Exposure": 9,
-                        "Professional Profiles & Documents": 10
-                      }
-                      setSingleQuestionForm({ 
-                        ...singleQuestionForm, 
-                        step: { 
-                          stepNumber: stepNumberMap[stepName] || singleQuestionForm.step.stepNumber,
-                          stepName: stepName 
-                        }
-                      })
-                    }} 
-                    className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
-                  >
-                    <option value="Academic Background">Academic Background</option>
-                    <option value="Career Aspirations">Career Aspirations</option>
-                    <option value="Skills & Strengths">Skills & Strengths</option>
-                    <option value="Learning & Development Preferences">Learning & Development Preferences</option>
-                    <option value="Timeline & Goals">Timeline & Goals</option>
-                    <option value="Work Preferences">Work Preferences</option>
-                    <option value="Career Motivation">Career Motivation</option>
-                    <option value="Career Challenges & Barriers">Career Challenges & Barriers</option>
-                    <option value="Networking & Professional Exposure">Networking & Professional Exposure</option>
-                    <option value="Professional Profiles & Documents">Professional Profiles & Documents</option>
-                  </select>
-                </div>
+                      type: newType,
+                      options: newType === "multiple-choice" ? ['', ''] : []
+                    })
+                  }} 
+                  className="w-full px-3 py-2 bg-[#0e2439]/50 border border-cyan-400/30 rounded-md text-sm focus:border-cyan-400/60 focus:outline-none text-white"
+                >
+                  <option value="text">Text</option>
+                  <option value="yes/no">Yes/No</option>
+                  <option value="multiple-choice">Multiple Choice</option>
+                  <option value="upload">Upload</option>
+                  <option value="link">Link</option>
+                </select>
               </div>
               
               {singleQuestionForm.type === "multiple-choice" && (
-                <div>
-                  <label className="text-sm text-white/80 block mb-1">Options (one per line) *</label>
-                  <Textarea 
-                    value={singleQuestionForm.options?.join('\n') || ''} 
-                    onChange={(e) => setSingleQuestionForm({ 
-                      ...singleQuestionForm, 
-                      options: e.target.value.split('\n').filter(opt => opt.trim())
-                    })} 
-                    className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm resize-none min-h-16" 
-                    placeholder="Option 1&#10;Option 2&#10;Option 3&#10;Option 4" 
-                  />
-                  <p className="text-xs text-cyan-300/70 mt-1">Enter each option on a new line</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-white/80 block">Options *</label>
+                    <NeuroButton
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSingleQuestionForm({
+                        ...singleQuestionForm,
+                        options: [...(singleQuestionForm.options || []), '']
+                      })}
+                      className="border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/10 text-xs"
+                      disabled={(singleQuestionForm.options || []).length >= 10}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Option ({(singleQuestionForm.options || []).length}/10)
+                    </NeuroButton>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {(singleQuestionForm.options || []).map((option, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <Input
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...(singleQuestionForm.options || [])]
+                              newOptions[index] = e.target.value
+                              setSingleQuestionForm({
+                                ...singleQuestionForm,
+                                options: newOptions
+                              })
+                            }}
+                            placeholder={`Option ${index + 1}`}
+                            className="bg-[#0e2439]/50 border-cyan-400/30 text-white text-sm focus:border-cyan-400/60"
+                          />
+                        </div>
+                        <NeuroButton
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newOptions = (singleQuestionForm.options || []).filter((_, i) => i !== index)
+                            setSingleQuestionForm({
+                              ...singleQuestionForm,
+                              options: newOptions
+                            })
+                          }}
+                          className="text-red-300 hover:bg-red-400/10 p-1"
+                          disabled={(singleQuestionForm.options || []).length <= 2}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </NeuroButton>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {(!singleQuestionForm.options || singleQuestionForm.options.length === 0) && (
+                    <div className="text-center py-4 text-cyan-300/70 text-sm">
+                      No options added yet. Click "Add Option" to get started.
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-cyan-300/70">
+                    Add at least 2 options for multiple choice questions. You can add up to 10 options.
+                    {(singleQuestionForm.options || []).length < 2 && (
+                      <span className="text-orange-300 ml-1">• Minimum 2 options required</span>
+                    )}
+                  </p>
                 </div>
               )}
               
@@ -923,7 +879,7 @@ export default function QuestionsManagement() {
             
             <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
               <NeuroButton variant="outline" onClick={() => setIsEditOpen(false)} className="border-cyan-400/30 text-cyan-100 w-full sm:w-auto text-sm">Cancel</NeuroButton>
-              <NeuroButton onClick={handleUpdateQuestion} disabled={isUpdating || !singleQuestionForm.text.trim() || !singleQuestionForm.step.stepName.trim()} className="bg-cyan-400/20 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/30 w-full sm:w-auto text-sm">
+              <NeuroButton onClick={handleUpdateQuestion} disabled={isUpdating || !singleQuestionForm.text.trim()} className="bg-cyan-400/20 border border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/30 w-full sm:w-auto text-sm">
                 {isUpdating ? "Updating..." : "Update Question"}
               </NeuroButton>
             </DialogFooter>

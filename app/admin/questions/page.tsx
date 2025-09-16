@@ -16,6 +16,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  Check,
 } from "lucide-react"
 import AdminOnly from "../AdminOnly"
 import { AdminSidebar } from "@/components/admin-sidebar"
@@ -53,7 +54,10 @@ export default function QuestionsManagement() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [isDeleteLoadingOpen, setIsDeleteLoadingOpen] = useState(false)
+  const [isDeleteSuccessOpen, setIsDeleteSuccessOpen] = useState(false)
   const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null)
+  const [deletedQuestionText, setDeletedQuestionText] = useState<string>("")
 
   // Forms
   const [singleQuestionForm, setSingleQuestionForm] = useState<AddQuestionRequest>({
@@ -294,18 +298,24 @@ export default function QuestionsManagement() {
         return
       }
 
+      // Store the question text for success message
+      setDeletedQuestionText(selectedQuestion.text)
+      
+      // Close confirmation dialog and show loading dialog
+      setIsDeleteOpen(false)
+      setIsDeleteLoadingOpen(true)
+
       await deleteQuestion(selectedQuestion._id, token)
       
-      toast({ 
-        title: "Question deleted successfully", 
-        description: "The question has been removed.",
-        duration: 3000
-      })
-      setIsDeleteOpen(false)
-      setSelectedQuestion(null)
-      loadQuestions() // Reload questions
+      // Close loading dialog and show success dialog
+      setIsDeleteLoadingOpen(false)
+      setIsDeleteSuccessOpen(true)
+      
+      // Reload questions
+      loadQuestions()
     } catch (error) {
       console.error('Error deleting question:', error)
+      setIsDeleteLoadingOpen(false)
       toast({ 
         title: "Failed to delete question", 
         description: error instanceof Error ? error.message : "Please try again." 
@@ -315,6 +325,11 @@ export default function QuestionsManagement() {
     }
   }
 
+  const handleCloseSuccessDialog = () => {
+    setIsDeleteSuccessOpen(false)
+    setSelectedQuestion(null)
+    setDeletedQuestionText("")
+  }
 
   return (
     <AdminOnly>
@@ -888,31 +903,137 @@ export default function QuestionsManagement() {
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-          <AlertDialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-red-400/30">
+          <AlertDialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-red-400/30 max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-white text-lg">Delete Question</AlertDialogTitle>
-              <AlertDialogDescription className="text-white/70">
-                Are you sure you want to delete this question? This action cannot be undone.
-                {selectedQuestion && (
-                  <div className="mt-2 p-3 bg-red-500/10 border border-red-400/20 rounded-md">
-                    <p className="text-sm font-medium text-red-300">Question:</p>
-                    <p className="text-sm text-red-200 mt-1">{selectedQuestion.text}</p>
-                  </div>
-                )}
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/20 border border-red-400/30">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <AlertDialogTitle className="text-white text-xl font-bold">Delete Question</AlertDialogTitle>
+              </div>
+              <AlertDialogDescription className="text-white/80 text-base">
+                <div className="space-y-3">
+                  <p className="font-medium text-red-300">⚠️ This action cannot be undone!</p>
+                  <p>Are you sure you want to permanently delete this question from the system?</p>
+                  
+                  {selectedQuestion && (
+                    <div className="mt-4 p-4 bg-red-500/10 border border-red-400/20 rounded-lg">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${getTypeColor(selectedQuestion.type)} text-xs font-medium`}>
+                            {selectedQuestion.type.replace('-', ' ')}
+                          </Badge>
+                          <Badge className={`${getStatusColor(selectedQuestion.status)} text-xs font-medium capitalize`}>
+                            {selectedQuestion.status}
+                          </Badge>
+                          {selectedQuestion.optional && (
+                            <Badge className="bg-orange-500/20 text-orange-300 border border-orange-400/40 text-xs font-medium">
+                              Optional
+                            </Badge>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-red-300 mb-1">Question Text:</p>
+                          <p className="text-sm text-red-200 bg-red-500/5 p-2 rounded border border-red-400/10">
+                            "{selectedQuestion.text}"
+                          </p>
+                        </div>
+                        {selectedQuestion.options && selectedQuestion.options.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-red-300 mb-1">Options ({selectedQuestion.options.length}):</p>
+                            <div className="text-xs text-red-200 bg-red-500/5 p-2 rounded border border-red-400/10">
+                              {selectedQuestion.options.slice(0, 3).map((option, index) => (
+                                <div key={index}>• {option}</div>
+                              ))}
+                              {selectedQuestion.options.length > 3 && (
+                                <div className="text-red-300/70">... and {selectedQuestion.options.length - 3} more</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-              <AlertDialogCancel className="border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/10 w-full sm:w-auto">Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="flex-col sm:flex-row gap-3 mt-6">
+              <AlertDialogCancel className="border-cyan-400/30 text-cyan-100 hover:bg-cyan-400/10 w-full sm:w-auto order-2 sm:order-1">
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction 
                 onClick={handleDeleteQuestion}
                 disabled={isDeleting}
-                className="bg-red-500/20 border border-red-400/30 text-red-100 hover:bg-red-500/30 w-full sm:w-auto"
+                className="bg-red-500/20 border border-red-400/30 text-red-100 hover:bg-red-500/30 w-full sm:w-auto order-1 sm:order-2 font-semibold"
               >
-                {isDeleting ? "Deleting..." : "Delete Question"}
+                {isDeleting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-300 border-t-transparent"></div>
+                    Deleting...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4" />
+                    Yes, Delete Question
+                  </div>
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Delete Loading Dialog */}
+        <Dialog open={isDeleteLoadingOpen} onOpenChange={() => {}}>
+          <DialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-blue-400/30 max-w-sm">
+            <div className="flex flex-col items-center justify-center py-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/20 border border-blue-400/30 mb-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-300 border-t-transparent"></div>
+              </div>
+              <DialogTitle className="text-white text-lg font-semibold">Deleting...</DialogTitle>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Success Dialog */}
+        <Dialog open={isDeleteSuccessOpen} onOpenChange={handleCloseSuccessDialog}>
+          <DialogContent className="bg-[#0e2439]/90 backdrop-blur-xl border border-green-400/30 max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/20 border border-green-400/30">
+                  <Check className="h-5 w-5 text-green-400" />
+                </div>
+                <DialogTitle className="text-white text-xl font-bold">Question Deleted Successfully</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-green-500/10 border border-green-400/20 rounded-lg">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-green-300">✅ Deletion Complete</p>
+                  <p className="text-sm text-green-200">
+                    The question has been permanently removed from the system.
+                  </p>
+                  {deletedQuestionText && (
+                    <div className="mt-2 p-2 bg-green-500/5 rounded border border-green-400/10">
+                      <p className="text-xs text-green-300/70 font-medium">Deleted Question:</p>
+                      <p className="text-xs text-green-200 mt-1">
+                        "{deletedQuestionText.length > 60 ? deletedQuestionText.substring(0, 60) + '...' : deletedQuestionText}"
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <NeuroButton 
+                onClick={handleCloseSuccessDialog}
+                className="bg-green-400/20 border border-green-400/30 text-green-100 hover:bg-green-400/30 w-full"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Got it!
+              </NeuroButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
     </AdminOnly>
